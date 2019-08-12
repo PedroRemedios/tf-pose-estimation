@@ -44,7 +44,7 @@ class Human:
     """
     body_parts: list of BodyPart
     """
-    __slots__ = ('body_parts', 'pairs', 'uidx_list', 'score')
+    __slots__ = ('body_parts', 'pairs', 'uidx_list', 'score', 'id')
 
     def __init__(self, pairs):
         self.pairs = []
@@ -53,6 +53,7 @@ class Human:
         for pair in pairs:
             self.add_pair(pair)
         self.score = 0.0
+        self.id = 0
 
     @staticmethod
     def _get_uidx(part_idx, idx):
@@ -294,6 +295,7 @@ class PoseEstimator:
             if is_added:
                 score = pafprocess.get_score(human_id)
                 human.score = score
+                human.id = human_id
                 humans.append(human)
 
         return humans

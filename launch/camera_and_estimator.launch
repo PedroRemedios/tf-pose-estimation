@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<launch>
+	<node name="pose_detection" pkg="tfpose_ros" type="3d_detection.py" output="screen" required="true">
+        <env name="CUDA_VISIBLE_DEVICES" value="0" />
+        <param name="camera" value="/camera/color/image_raw" />
+        <param name="model" value="mobilenet_v2_large" />
+        <param name="resolution" value="432x368" />
+    </node>
+
+	<include file="$(find realsense2_camera)/launch/rs_rgbd.launch" />
+</launch>

@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <launch>
-    <arg name="video" default="$(find tfpose_ros)/etcs/dance.mp4" />
+    <arg name="usb_cam" default="0" />
     <arg name="video_width" default="1280" />
     <arg name="video_height" default="720" />
 
@@ -42,11 +42,11 @@
     <include file="$(find video_stream_opencv)/launch/camera.launch">
         <arg name="camera_name" value="videofile" />
         <!-- means video device 0, /dev/video0 -->
-        <arg name="video_stream_provider" value="$(arg video)" />
+        <arg name="video_stream_provider" value="$(arg usb_cam)" />
         <!-- throttling the querying of frames to -->
         <arg name="fps" value="30" />
         <!-- setting frame_id -->
-        <arg name="frame_id" value="videofile_frame" />
+        <arg name="frame_id" value="usb_cam" />
         <arg name="width" value="$(arg video_width)"/>
         <arg name="height" value="$(arg video_height)"/>
         <arg name="visualize" value="false" />

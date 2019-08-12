@@ -8,11 +8,13 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   rospy
   std_msgs
+  sensor_msgs
+  visualization_msgs
   message_generation
 )
 
 # setup.py is called during catkin build
-catkin_python_setup()
+# catkin_python_setup()
 
 # Generate messages in the 'msg' folder
 add_message_files(
@@ -20,10 +22,18 @@ add_message_files(
   BodyPartElm.msg
   Person.msg
   Persons.msg
+  BodyPartElm3D.msg
+  Person3D.msg
+  Persons3D.msg
+)
+
+add_service_files(
+  FILES
+  GetPersons.srv
 )
 
 generate_messages(
-  DEPENDENCIES std_msgs
+  DEPENDENCIES std_msgs sensor_msgs visualization_msgs
 )
 
 catkin_package(

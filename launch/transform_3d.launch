@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<launch>
+	<!-- Transforms 2D to 3D coordinates for each point in a person's pose -->
+	<node name="pose_estimator" pkg="tfpose_ros" type="3d_estimation.py" output="screen" required="true">
+		<param name="point_cloud" value="/camera/depth_registered/points" />
+		<param name="rgb_image" value="/camera/color/image_raw" />
+	</node>
+
+	<!-- Transforms the 3D points from the camera axis to the robot axis (For simmetry) -->
+	<node name="pose_transformator" pkg="tfpose_ros" type="transform_axis.py" output="screen" required="true">
+		<param name="person_in" value="/tfpose_ros/detected_poses_keypoints_3d" />
+		<param name="person_out" value="/tfpose_ros/transformed_poses_keypoints_3d" />
+	</node>
+
+	<!-- Point visualization -->
+	<!--node name="pose_vizualizator" pkg="tfpose_ros" type="3d_vizualization.py" output="screen" required="true">
+		<param name="persons" value="/tfpose_ros/detected_poses_keypoints_3d" />
+		<param name="points" value="/tfpose_ros/points_3d" />
+	</node>
+
+	<node name="rviz" pkg="rviz" type="rviz" output="screen" required="true" /-->
+</launch>
