@@ -14,9 +14,11 @@ class ArcodeCalibration(object):
 		df = pd.read_csv("~/ros/camera_transforms/transform.csv", header=None)
 		self.rot_matrix, self.tra_matrix = self.transform_matrixes(df.values)
 
-		dfi = pd.read_csv("~/ros/camera_transforms/gripper_points.csv", header=None)
-		self.left = dfi.values[[0, 1, 2], :]
-		self.right = dfi.values[[3, 4, 5], :]
+		dfi = pd.read_csv("~/ros/camera_transforms/ar_point.csv", header=None)
+		self.ar_point = dfi.values
+
+		dfii = pd.read_csv("~/ros/camera_transforms/ar_reference.csv", header=None)
+		self.ar_reference = self.transform_point(dfii.values)
 
 		self.find_best_transform(df.values, float(rang), float(err))
 
@@ -84,17 +86,17 @@ class ArcodeCalibration(object):
 						# New transformation and points
 						med[0][0], med[3][0], med[4][0], med[5][0] = x_new, qx_new, qy_new, qz_new
 						self.rot_matrix, self.tra_matrix = self.transform_matrixes(med)
-						new_left, new_right = self.transform_points(self.left, self.right)
+						new_point = self.transform_point(self.ar_point)
 
 						# Conditions that need to be close to zero (Same y and z, and x middle point)
 						zero_conditions = np.zeros((3, 1))
-						zero_conditions[0][0] = (new_left[0][0] + new_right[0][0]) / 2
-						zero_conditions[1][0] = abs(new_left[1][0] - new_right[1][0])
-						zero_conditions[2][0] = abs(new_left[2][0] - new_right[2][0])
+						zero_conditions[0][0] = abs(new_point[1][0] - self.ar_reference[1][0])
+						zero_conditions[1][0] = abs(new_point[1][0] - self.ar_reference[1][0])
+						zero_conditions[2][0] = abs(new_point[2][0] - self.ar_reference[2][0])
 
 						if abs(zero_conditions[0][0]) <= err and abs(zero_conditions[1][0]) <= err and abs(zero_conditions[2][0]) <= err:
-							pd.DataFrame(med).to_csv("~/ros/camera_transforms/calibration/nice_trasnform%d.csv" % num_trans, header=False, index=False)
-							print("New nice transformation saved in ros/camera_transforms/calibration/nice_trasnform%d.csv" % num_trans)
+							pd.DataFrame(med).to_csv("~/ros/camera_transforms/calibration/nice_transform%d.csv" % num_trans, header=False, index=False)
+							print("New nice transformation saved in ros/camera_transforms/calibration/nice_transform%d.csv" % num_trans)
 							print("X: %.2f, Y: %.2f, Z: %.2f, tX: %.2f" % (qx_new, qy_new, qz_new, x_new))
 							num_trans += 1
 

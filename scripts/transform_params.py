@@ -7,14 +7,16 @@ from geometry_msgs.msg import Pose, PoseStamped
 from scipy.spatial.transform import Rotation as R
 
 class TransformRT(object):
-	def __init__(self, med_num, transform, analysis):
+	def __init__(self, med_num, transform, analysis, first):
 		# 7xN matrix, where each column has the translation (x, y, z) and rotation (parameters) from camera do robot
-		self.point_matrix = np.array([])
+		self.point_matrix_0 = np.array([])
+		self.point_matrix_6 = np.array([])
 		self.transform = transform
+		self.first = first
 
 		# 6xN matrix, with translation and axis rotation parameters
-		self.analysis_matrix = np.array([])
-		self.analysis = analysis
+		#elf.analysis_matrix = np.array([])
+		#self.analysis = analysis
 
 		self.med_num = int(med_num)
 
@@ -27,31 +29,42 @@ class TransformRT(object):
 			t = marker.pose.pose.pose.position
 			q = marker.pose.pose.pose.orientation
 
-			rx, ry, rz = self.quaternion_to_axis_rotation(q.x, q.y, q.z, q.w)
+			"""rx, ry, rz = self.quaternion_to_axis_rotation(q.x, q.y, q.z, q.w)
 			if self.analysis:
 				if self.analysis_matrix.shape[0] != 0:
 					self.analysis_matrix = np.insert(self.analysis_matrix, 0, [t.x, t.y, t.z, rx, ry, rz], axis=1)
 				else:
 					self.analysis_matrix = np.array([t.x, t.y, t.z, rx, ry, rz]).reshape(6, 1)
-
-			if self.transform:	
-				if self.point_matrix.shape[0] != 0:
-					self.point_matrix = np.insert(self.point_matrix, 0, [t.x, t.y, t.z, q.x, q.y, q.z, q.w], axis=1)
+			"""
+			#if self.transform:
+			if marker.id == 0:	
+				if self.point_matrix_0.shape[0] != 0:
+					self.point_matrix_0 = np.insert(self.point_matrix_0, 0, [t.x, t.y, t.z], axis=1)
 				else:
-					self.point_matrix = np.array([t.x, t.y, t.z, q.x, q.y, q.z, q.w]).reshape(7, 1)
+					self.point_matrix_0 = np.array([t.x, t.y, t.z]).reshape(3, 1)
 
-		if self.transform and self.point_matrix.shape[1] == self.med_num:
-			median_matrix = np.median(self.point_matrix, axis=1)
+			if marker.id == 6:	
+				if self.point_matrix_6.shape[0] != 0:
+					self.point_matrix_6 = np.insert(self.point_matrix_6, 0, [t.x, t.y, t.z, q.x, q.y, q.z, q.w], axis=1)
+				else:
+					self.point_matrix_6 = np.array([t.x, t.y, t.z, q.x, q.y, q.z, q.w]).reshape(7, 1)
+		if self.transform and self.point_matrix_6.shape[1] == self.med_num:
+			median_matrix = np.median(self.point_matrix_0, axis=1)
+			if first:
+				pd.DataFrame(median_matrix).to_csv("~/ros/camera_transforms/ar_reference.csv", header=False, index=False)
+			else:
+				pd.DataFrame(median_matrix).to_csv("~/ros/camera_transforms/ar_point.csv", header=False, index=False)
+			median_matrix = np.median(self.point_matrix_6, axis=1)
 			pd.DataFrame(median_matrix).to_csv("~/ros/camera_transforms/transform.csv", header=False, index=False)
 			print("Transformation parameters saved in ros/camera_transforms/transform.csv")
 			rospy.signal_shutdown("")
 
-		if self.analysis and self.analysis_matrix.shape[1] == self.med_num:
+		"""if self.analysis and self.analysis_matrix.shape[1] == self.med_num:
 			pd.DataFrame(self.analysis_matrix).to_csv("~/ros/camera_transforms/analysis.csv", header=False, index=False)
 			print("Analysis parameters saved in ros/camera_transforms/analysis.csv")
 			rospy.signal_shutdown("")
-
-		print(self.point_matrix.shape[1])
+		"""
+		print(self.point_matrix_6.shape[1])
 
 	def quaternion_to_axis_rotation(self, qx, qy, qz, qw):
 		r = R.from_quat([qx, qy, qz, qw])
@@ -65,6 +78,6 @@ if __name__ == '__main__':
 	med_num = rospy.get_param("~median_num", "100")
 
 	# Axis transformation object
-	rt = TransformRT(med_num, transform=True, analysis=False)
+	rt = TransformRT(med_num, transform=True, analysis=False, first=True)
 
 	rospy.spin()
