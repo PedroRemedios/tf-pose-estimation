@@ -11,16 +11,21 @@ from scipy.spatial.transform import Rotation as R
 class ArcodeCalibration(object):
 	def __init__(self, rang, err):
 		# Get transformation parameters from csv file (Fetched previously)
-		df = pd.read_csv("~/ros/camera_transforms/transform.csv", header=None)
+		df = pd.read_csv("~/ros/camera_transforms/transform_reference.csv", header=None)
 		self.rot_matrix, self.tra_matrix = self.transform_matrixes(df.values)
 
-		dfi = pd.read_csv("~/ros/camera_transforms/ar_point.csv", header=None)
-		self.ar_point = dfi.values
+		dfi = pd.read_csv("~/ros/camera_transforms/ar_reference.csv", header=None)
+		self.ar_reference = self.transform_point(dfi.values)
+		print(self.ar_reference)
 
-		dfii = pd.read_csv("~/ros/camera_transforms/ar_reference.csv", header=None)
-		self.ar_reference = self.transform_point(dfii.values)
+		dfii = pd.read_csv("~/ros/camera_transforms/ar_point.csv", header=None)
+		self.ar_point = dfii.values
 
-		self.find_best_transform(df.values, float(rang), float(err))
+		dfiii = pd.read_csv("~/ros/camera_transforms/transform.csv", header=None)
+		#self.rot_matrix, self.tra_matrix = self.transform_matrixes(dfiii.values)
+		#new_point = self.transform_point(self.ar_point)
+		#print(new_point)
+		self.error_find(dfiii.values)
 
 	def transform_matrixes(self, med):
 		rot_matrix = np.zeros((3, 3))
@@ -50,7 +55,7 @@ class ArcodeCalibration(object):
 		return rot_matrix, tra_matrix
 
 
-	def find_best_transform(self, med, rang, err):
+	def find_best_transform(self, med, err, num_trans):
 		# Translation and Rotation parameters from the original transform
 		tx, ty, tz = med[0][0], med[1][0], med[2][0]
 		qx, qy, qz, qw = med[3][0], med[4][0], med[5][0], med[6][0]
@@ -67,8 +72,9 @@ class ArcodeCalibration(object):
 		# Interval Parameters
 		angle_range = 0.05
 		origin_range = 0.05
-		num_points = 40
-		num_trans = 0
+		num_points = 20
+		mincoiso = 100
+		final_med = med
 
 		# Iterate over rotation axis and translation in x
 		for x in np.arange(max(rx - angle_range, -1), min(rx + angle_range, 1), 2 * angle_range / num_points):
@@ -80,30 +86,29 @@ class ArcodeCalibration(object):
 				for z in np.arange(max(rz - angle_range, -1), min(rz + angle_range, 1), 2 * angle_range / num_points):
 					qz_new = z * math.sin(theta)
 
-					for t in np.arange(tx - origin_range, tx + origin_range, 2 * origin_range / num_points):
-						x_new = t
+					for zt in np.arange(tz - origin_range, tz + origin_range, 2 * origin_range / num_points):
 
 						# New transformation and points
-						med[0][0], med[3][0], med[4][0], med[5][0] = x_new, qx_new, qy_new, qz_new
+						med[2][0], med[3][0], med[4][0], med[5][0] = zt, qx_new, qy_new, qz_new
 						self.rot_matrix, self.tra_matrix = self.transform_matrixes(med)
 						new_point = self.transform_point(self.ar_point)
 
 						# Conditions that need to be close to zero (Same y and z, and x middle point)
 						zero_conditions = np.zeros((3, 1))
-						zero_conditions[0][0] = abs(new_point[1][0] - self.ar_reference[1][0])
+						zero_conditions[0][0] = abs(new_point[0][0] - self.ar_reference[0][0])
 						zero_conditions[1][0] = abs(new_point[1][0] - self.ar_reference[1][0])
 						zero_conditions[2][0] = abs(new_point[2][0] - self.ar_reference[2][0])
 
-						if abs(zero_conditions[0][0]) <= err and abs(zero_conditions[1][0]) <= err and abs(zero_conditions[2][0]) <= err:
-							pd.DataFrame(med).to_csv("~/ros/camera_transforms/calibration/nice_transform%d.csv" % num_trans, header=False, index=False)
-							print("New nice transformation saved in ros/camera_transforms/calibration/nice_transform%d.csv" % num_trans)
-							print("X: %.2f, Y: %.2f, Z: %.2f, tX: %.2f" % (qx_new, qy_new, qz_new, x_new))
-							num_trans += 1
+						num = abs(zero_conditions[0][0]) + abs(zero_conditions[1][0]) + abs(zero_conditions[2][0])
+						if num < mincoiso:
+							mincoiso = num
+							final_med = med
+							print num
 
-		if num_trans == 0:
-			print('No nice transformations were found')
-		else:
-			print('Yey, %d nice transformations were found' % num_trans)
+		pd.DataFrame(final_med).to_csv("~/ros/camera_transforms/calibration/nice_transform%d.csv" % num_trans, header=False, index=False)
+		print("New nice transformation saved in ros/camera_transforms/calibration/nice_transform%d.csv" % num_trans)
+
+		return 2
 
 
 	def transform_points(self, left, right):
@@ -117,11 +122,27 @@ class ArcodeCalibration(object):
 
 		return point_tf
 
+	def error_find(self, med):
+		num_trans = 0
+		num_trans_min = 2
+		err_rang_min = 0.010
+		err_rang_max = 0.050
+		pace = 0.002
+		for err in np.arange(err_rang_min, err_rang_max, pace):
+			print err
+			num_trans = self.find_best_transform(med, err, num_trans)
+			if num_trans >= num_trans_min:
+				break
+
+		if num_trans == 0:
+			print('No nice transformations were found')
+		else:
+			print('Yey, %d nice transformations were found' % num_trans)
 
 if __name__ == '__main__':
 	# Node initialization and number of samples for median
 	rang = rospy.get_param("~rang", "0.1")
-	err = rospy.get_param("~err", "0.0008")
+	err = rospy.get_param("~err", "0.015")
 	rospy.init_node("ar_callibration")
 	# Axis transformation object
 	AR = ArcodeCalibration(rang, err)

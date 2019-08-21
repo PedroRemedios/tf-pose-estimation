@@ -7,7 +7,7 @@ from geometry_msgs.msg import Pose, PoseStamped
 from scipy.spatial.transform import Rotation as R
 
 class TransformRT(object):
-	def __init__(self, med_num, transform, analysis, first):
+	def __init__(self, med_num, first, transform, analysis):
 		# 7xN matrix, where each column has the translation (x, y, z) and rotation (parameters) from camera do robot
 		self.point_matrix_0 = np.array([])
 		self.point_matrix_6 = np.array([])
@@ -37,26 +37,29 @@ class TransformRT(object):
 					self.analysis_matrix = np.array([t.x, t.y, t.z, rx, ry, rz]).reshape(6, 1)
 			"""
 			#if self.transform:
-			if marker.id == 0:	
+			if marker.id[0] == 0:
 				if self.point_matrix_0.shape[0] != 0:
 					self.point_matrix_0 = np.insert(self.point_matrix_0, 0, [t.x, t.y, t.z], axis=1)
 				else:
 					self.point_matrix_0 = np.array([t.x, t.y, t.z]).reshape(3, 1)
 
-			if marker.id == 6:	
+			if marker.id[0] == 6:	
 				if self.point_matrix_6.shape[0] != 0:
 					self.point_matrix_6 = np.insert(self.point_matrix_6, 0, [t.x, t.y, t.z, q.x, q.y, q.z, q.w], axis=1)
 				else:
 					self.point_matrix_6 = np.array([t.x, t.y, t.z, q.x, q.y, q.z, q.w]).reshape(7, 1)
+
 		if self.transform and self.point_matrix_6.shape[1] == self.med_num:
-			median_matrix = np.median(self.point_matrix_0, axis=1)
-			if first:
-				pd.DataFrame(median_matrix).to_csv("~/ros/camera_transforms/ar_reference.csv", header=False, index=False)
+			median_calibration = np.median(self.point_matrix_0, axis=1)
+			median_transform = np.median(self.point_matrix_6, axis=1)
+			if self.first:
+				pd.DataFrame(median_calibration).to_csv("~/ros/camera_transforms/ar_reference.csv", header=False, index=False)
+				pd.DataFrame(median_transform).to_csv("~/ros/camera_transforms/transform_reference.csv", header=False, index=False)
+				print("Transformation parameters saved in ros/camera_transforms/transform_reference.csv")
 			else:
-				pd.DataFrame(median_matrix).to_csv("~/ros/camera_transforms/ar_point.csv", header=False, index=False)
-			median_matrix = np.median(self.point_matrix_6, axis=1)
-			pd.DataFrame(median_matrix).to_csv("~/ros/camera_transforms/transform.csv", header=False, index=False)
-			print("Transformation parameters saved in ros/camera_transforms/transform.csv")
+				pd.DataFrame(median_calibration).to_csv("~/ros/camera_transforms/ar_point.csv", header=False, index=False)
+				pd.DataFrame(median_transform).to_csv("~/ros/camera_transforms/transform.csv", header=False, index=False)
+				print("Transformation parameters saved in ros/camera_transforms/transform.csv")
 			rospy.signal_shutdown("")
 
 		"""if self.analysis and self.analysis_matrix.shape[1] == self.med_num:
@@ -76,8 +79,9 @@ if __name__ == '__main__':
 	# Node initialization and number of samples for median
 	rospy.init_node("transform_rt")
 	med_num = rospy.get_param("~median_num", "100")
+	first_tra = rospy.get_param("~first_tra", "True")
 
 	# Axis transformation object
-	rt = TransformRT(med_num, transform=True, analysis=False, first=True)
+	rt = TransformRT(med_num, bool(first_tra), transform=True, analysis=False)
 
 	rospy.spin()
