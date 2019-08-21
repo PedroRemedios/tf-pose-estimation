@@ -1,5 +1,8 @@
 <?xml version="1.0"?>
 <launch>
+	<arg name="width"  default="848"/>
+	<arg name="height" default="480"/>
+	
 	<node name="pose_detection" pkg="tfpose_ros" type="3d_detection.py" output="screen" required="true">
         <env name="CUDA_VISIBLE_DEVICES" value="0" />
         <param name="camera" value="/camera/color/image_raw" />
@@ -7,5 +10,8 @@
         <param name="resolution" value="432x368" />
     </node>
 
-	<include file="$(find realsense2_camera)/launch/rs_rgbd.launch" />
+	<include file="$(find realsense2_camera)/launch/rs_rgbd.launch">
+		<arg name="color_width" value="$(arg width)"/>
+		<arg name="color_height" value="$(arg height)"/>
+	</include>
 </launch>

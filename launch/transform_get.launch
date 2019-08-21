@@ -1,10 +1,14 @@
 <?xml version="1.0"?>
 <launch>
+	<arg name="med"   default="500" />
+	<arg name="first" default="True" />	
+	
 	<!-- Transforms 2D to 3D coordinates for each point in a person's pose -->
 	<include file="$(find apriltag_ros)/launch/continuous_detection.launch" />
 
 	<!-- Transforms the 3D points from the camera axis to the robot axis (For simmetry) -->
 	<node name="transformation_get" pkg="tfpose_ros" type="transform_params.py" output="screen" required="false">
-		<param name="median_num" value="500" />
+		<param name="median_num" value="$(arg med)" />
+		<param name="first_tra"  value="$(arg first)" />
 	</node>
 </launch>

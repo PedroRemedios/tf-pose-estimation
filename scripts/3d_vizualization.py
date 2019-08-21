@@ -26,8 +26,8 @@ def body_part_point(body_part, symmetric):
 	return p
 
 def iterate_body_parts(marker, person, symmetric):
-	"""if body_part_valid(person.nose):
-		marker.points.append(body_part_point(person.nose, symmetric))"""
+	if body_part_valid(person.nose):
+		marker.points.append(body_part_point(person.nose, symmetric))
 	if body_part_valid(person.neck):
 		marker.points.append(body_part_point(person.neck, symmetric))
 	if body_part_valid(person.right_shoulder):
@@ -42,7 +42,7 @@ def iterate_body_parts(marker, person, symmetric):
 		marker.points.append(body_part_point(person.left_elbow, symmetric))
 	if body_part_valid(person.left_wrist):
 		marker.points.append(body_part_point(person.left_wrist, symmetric))
-	"""if body_part_valid(person.right_hip):
+	if body_part_valid(person.right_hip):
 		marker.points.append(body_part_point(person.right_hip, symmetric))
 	if body_part_valid(person.right_knee):
 		marker.points.append(body_part_point(person.right_knee, symmetric))
@@ -61,7 +61,7 @@ def iterate_body_parts(marker, person, symmetric):
 	if body_part_valid(person.right_ear):
 		marker.points.append(body_part_point(person.right_ear, symmetric))
 	if body_part_valid(person.left_ear):
-		marker.points.append(body_part_point(person.left_ear, symmetric))"""
+		marker.points.append(body_part_point(person.left_ear, symmetric))
 	return marker
 
 def drawer(person):

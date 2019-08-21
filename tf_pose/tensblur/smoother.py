@@ -32,13 +32,12 @@ def layer(op):
 
 
 class Smoother(object):
-    def __init__(self, inputs, filter_size, sigma, heat_map_size=0):
+    def __init__(self, inputs, filter_size, sigma):
         self.inputs = inputs
         self.terminals = []
         self.layers = dict(inputs)
         self.filter_size = filter_size
         self.sigma = sigma
-        self.heat_map_size = heat_map_size
         self.setup()
 
     def setup(self):
@@ -87,10 +86,7 @@ class Smoother(object):
              name,
              padding='SAME'):
         # Get the number of channels in the input
-        if self.heat_map_size != 0:
-            c_i = self.heat_map_size 
-        else:
-            c_i = input.get_shape().as_list()[3]
+        c_i = input.get_shape().as_list()[3]
         # Convolution for a given input and kernel
         convolve = lambda i, k: tf.nn.depthwise_conv2d(i, k, [1, 1, 1, 1], padding=padding)
         with tf.variable_scope(name) as scope:

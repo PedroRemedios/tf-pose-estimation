@@ -22,9 +22,16 @@ class ArcodeCalibration(object):
 		self.ar_point = dfii.values
 
 		dfiii = pd.read_csv("~/ros/camera_transforms/transform.csv", header=None)
-		#self.rot_matrix, self.tra_matrix = self.transform_matrixes(dfiii.values)
-		#new_point = self.transform_point(self.ar_point)
-		#print(new_point)
+		self.rot_matrix, self.tra_matrix = self.transform_matrixes(dfiii.values)
+		new_point = self.transform_point(self.ar_point)
+		print(new_point)
+		zero_conditions = np.zeros((3, 1))
+		zero_conditions[0][0] = abs(new_point[0][0] - self.ar_reference[0][0])
+		zero_conditions[1][0] = abs(new_point[1][0] - self.ar_reference[1][0])
+		zero_conditions[2][0] = abs(new_point[2][0] - self.ar_reference[2][0])
+
+		print(math.sqrt(zero_conditions[0][0]**2 + zero_conditions[1][0]**2 + zero_conditions[2][0]**2))
+		return
 		self.error_find(dfiii.values)
 
 	def transform_matrixes(self, med):
@@ -70,9 +77,9 @@ class ArcodeCalibration(object):
 		rz = qz/math.sin(theta)
 
 		# Interval Parameters
-		angle_range = 0.05
+		angle_range = 0.01
 		origin_range = 0.05
-		num_points = 20
+		num_points = 100
 		mincoiso = 100
 		final_med = med
 
@@ -86,24 +93,22 @@ class ArcodeCalibration(object):
 				for z in np.arange(max(rz - angle_range, -1), min(rz + angle_range, 1), 2 * angle_range / num_points):
 					qz_new = z * math.sin(theta)
 
-					for zt in np.arange(tz - origin_range, tz + origin_range, 2 * origin_range / num_points):
+					# New transformation and points
+					med[3][0], med[4][0], med[5][0] = qx_new, qy_new, qz_new
+					self.rot_matrix, self.tra_matrix = self.transform_matrixes(med)
+					new_point = self.transform_point(self.ar_point)
 
-						# New transformation and points
-						med[2][0], med[3][0], med[4][0], med[5][0] = zt, qx_new, qy_new, qz_new
-						self.rot_matrix, self.tra_matrix = self.transform_matrixes(med)
-						new_point = self.transform_point(self.ar_point)
+					# Conditions that need to be close to zero (Same y and z, and x middle point)
+					zero_conditions = np.zeros((3, 1))
+					zero_conditions[0][0] = abs(new_point[0][0] - self.ar_reference[0][0])
+					zero_conditions[1][0] = abs(new_point[1][0] - self.ar_reference[1][0])
+					zero_conditions[2][0] = abs(new_point[2][0] - self.ar_reference[2][0])
 
-						# Conditions that need to be close to zero (Same y and z, and x middle point)
-						zero_conditions = np.zeros((3, 1))
-						zero_conditions[0][0] = abs(new_point[0][0] - self.ar_reference[0][0])
-						zero_conditions[1][0] = abs(new_point[1][0] - self.ar_reference[1][0])
-						zero_conditions[2][0] = abs(new_point[2][0] - self.ar_reference[2][0])
-
-						num = abs(zero_conditions[0][0]) + abs(zero_conditions[1][0]) + abs(zero_conditions[2][0])
-						if num < mincoiso:
-							mincoiso = num
-							final_med = med
-							print num
+					num = math.sqrt(zero_conditions[0][0]**2 + zero_conditions[1][0]**2 + zero_conditions[2][0]**2)
+					if num < mincoiso:
+						mincoiso = num
+						final_med = med
+						print num
 
 		pd.DataFrame(final_med).to_csv("~/ros/camera_transforms/calibration/nice_transform%d.csv" % num_trans, header=False, index=False)
 		print("New nice transformation saved in ros/camera_transforms/calibration/nice_transform%d.csv" % num_trans)
