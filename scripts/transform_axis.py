@@ -2,6 +2,8 @@
 import rospy, math
 import pandas as pd
 import numpy as np
+import tf
+import geometry_msgs.msg
 from tfpose_ros.msg import Person3D, BodyPartElm3D
 
 class Transform(object):
@@ -14,7 +16,7 @@ class Transform(object):
 
 		# Get transformation parameters from csv file (Fetched previously)
 		df = pd.read_csv("~/ros/camera_transforms/transform.csv", header=None)
-		self.rot_matrix, self.tra_matrix = self.transform_matrixes(df.values)
+		self.tf = self.get_tf_transform(df.values)
 
 	def callback(self, person):
 		person_tf = Person3D()
@@ -24,32 +26,41 @@ class Transform(object):
 
 		self.person_pub.publish(person_tf)
 
-	def transform_matrixes(self, med):
+	def get_tf_transform(self, med):
 		rot_matrix = np.zeros((3, 3))
 		tra_matrix = np.zeros((3, 1))
 		tx, ty, tz = med[0][0], med[1][0], med[2][0]
 		qx, qy, qz, qw = med[3][0], med[4][0], med[5][0], med[6][0]
-		s = 1 / (qx**2 + qy**2 + qz**2 + qw**2)
 
-		# Rotation elements
-		rot_matrix[0][0] = 1 - 2 * s * (qy**2 + qz**2)
-		rot_matrix[0][1] = 2 * s * (qx*qy - qz*qw)
-		rot_matrix[0][2] = 2 * s * (qx*qz + qy*qw)
+		t = tf.TransformerROS(True, rospy.Duration(10.0))
+		m = geometry_msgs.msg.TransformStamped()
+		m.header.frame_id = 'camera_frame'
+		m.child_frame_id = 'baxter_frame'
+		m.transform.translation.x = tx
+		m.transform.translation.y = ty
+		m.transform.translation.z = tz
+		m.transform.rotation.x = qx
+		m.transform.rotation.y = qy
+		m.transform.rotation.z = qz
+		m.transform.rotation.w = qw
 
-		rot_matrix[1][0] = 2 * s * (qx*qy + qz*qw)
-		rot_matrix[1][1] = 1 - 2 * s * (qx**2 + qz**2)
-		rot_matrix[1][2] = 2 * s * (qy*qz - qx*qw)
+		t.setTransform(m)
+		#t.lookupTransform('/camera_depth_optical_frame', '/baxter_frame', rospy.Time(0))
 
-		rot_matrix[2][0] = 2 * s * (qx*qz - qy*qw)
-		rot_matrix[2][1] = 2 * s * (qy*qz + qx*qw)
-		rot_matrix[2][2] = 1 - 2 * s * (qx**2 + qy**2)
+		return t
 
-		# Translation elements
-		tra_matrix[0][0] = -tx
-		tra_matrix[1][0] = -ty
-		tra_matrix[2][0] = -tz
+	def apply_tf_transform(self, tf, point):
+		x = point[0][0]
+		y = point[1][0]
+		z = point[2][0]
 
-		return rot_matrix, tra_matrix
+		m2 = geometry_msgs.msg.PointStamped()
+		m2.header.frame_id = 'camera_frame'
+		m2.point.x = x
+		m2.point.y = y
+		m2.point.z = z		
+
+		return tf.transformPoint('baxter_frame', m2).point
 
 	def body_part_valid(self, body_part):
 		if math.isnan(body_part.x) or math.isnan(body_part.y) or math.isnan(body_part.z):
@@ -68,9 +79,8 @@ class Transform(object):
 
 		# Apply transformation matrix to body part point
 		point_array = np.array([body_part.x, body_part.y, body_part.z]).reshape(3, 1)
-		point_tf = self.tra_matrix + point_array
-		point_tf = np.matmul(self.rot_matrix, point_tf)
-		body_part_tf.x, body_part_tf.y, body_part_tf.z = point_tf[0][0], point_tf[1][0], point_tf[2][0]		
+		point_tf = self.apply_tf_transform(self.tf, point_array)
+		body_part_tf.x, body_part_tf.y, body_part_tf.z = point_tf.x, point_tf.y, point_tf.z		
 
 		return body_part_tf
 

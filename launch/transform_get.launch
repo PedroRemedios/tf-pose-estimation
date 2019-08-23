@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <launch>
-	<arg name="med"   default="500" />
+	<arg name="med"   default="300" />
 	<arg name="first" default="True" />	
 	
 	<!-- Transforms 2D to 3D coordinates for each point in a person's pose -->

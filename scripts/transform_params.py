@@ -2,6 +2,7 @@
 import rospy, sys
 import numpy as np
 import pandas as pd
+from tqdm import tqdm
 from apriltag_ros.msg import AprilTagDetectionArray
 from geometry_msgs.msg import Pose, PoseStamped
 from scipy.spatial.transform import Rotation as R
@@ -49,6 +50,8 @@ class TransformRT(object):
 				else:
 					self.point_matrix_6 = np.array([t.x, t.y, t.z, q.x, q.y, q.z, q.w]).reshape(7, 1)
 
+		self.printProgressBar(self.point_matrix_6.shape[1], self.med_num)
+
 		if self.transform and self.point_matrix_6.shape[1] == self.med_num:
 			median_calibration = np.median(self.point_matrix_0, axis=1)
 			median_transform = np.median(self.point_matrix_6, axis=1)
@@ -67,12 +70,20 @@ class TransformRT(object):
 			print("Analysis parameters saved in ros/camera_transforms/analysis.csv")
 			rospy.signal_shutdown("")
 		"""
-		print(self.point_matrix_6.shape[1])
 
 	def quaternion_to_axis_rotation(self, qx, qy, qz, qw):
 		r = R.from_quat([qx, qy, qz, qw])
 		rx, ry, rz = r.as_euler('xyz', degrees=True)
 		return rx, ry, rz
+
+	def printProgressBar (self, iteration, total):
+	    percent = ("{0:.1f}").format(100 * (iteration / float(total)))
+	    filledLength = int(100 * iteration // total)
+	    bar = '█' * filledLength + '-' * (100 - filledLength)
+	    print('\r%s |%s| %s%% %s' % ("Transform Progress", bar, percent, "Complete"), end = '\r')
+	    # Print New Line on Complete
+	    if iteration == total: 
+	        print()
 
 
 if __name__ == '__main__':
