@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <launch>
 	<arg name="med"   default="300" />
-	<arg name="first" default="True" />	
+	<arg name="first" default="False" />	
 	
 	<!-- Transforms 2D to 3D coordinates for each point in a person's pose -->
 	<include file="$(find apriltag_ros)/launch/continuous_detection.launch" />
